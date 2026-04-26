@@ -1,6 +1,9 @@
 # EPGStation MCP Server
-
+## 構成
 ![アーキ図](mcp_epgstation.png)
+
+## チャット画面サンプル
+![チャット画面サンプル](chat_sample.png)
 
 EPGStation の情報参照と録画操作を MCP 経由で公開する Streamable HTTP サーバーです。通常の MCP ツールに加えて、Apps 対応クライアント向けの HTML ウィジェットも提供します。
 
