@@ -1,0 +1,27 @@
+services:
+  mcp_epgstation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    expose:
+      - "${PORT:-3001}"
+    restart: unless-stopped
+
+  mcp_auth_proxy:
+    image: ${MCP_AUTH_PROXY_IMAGE:-ghcr.io/sigbit/mcp-auth-proxy:latest}
+    depends_on:
+      - mcp_epgstation
+    env_file:
+      - .env
+    ports:
+      - "${HOST_PORT:-3001}:80"
+    volumes:
+      - mcp_auth_proxy_data:/data
+    command:
+      - "http://mcp_epgstation:${PORT:-3001}"
+    restart: unless-stopped
+
+volumes:
+  mcp_auth_proxy_data:

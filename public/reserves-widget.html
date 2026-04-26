@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>録画予約一覧</title><style>
+body{margin:0;padding:12px;font-family:system-ui,-apple-system,sans-serif;background:#f6f7f9;color:#111827}
+h2{font-size:15px;font-weight:700;margin:0 0 10px}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.07)}
+th{background:#f3f4f6;font-size:11px;font-weight:600;color:#6b7280;padding:7px 10px;text-align:left}
+td{padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+img.logo{width:36px;height:auto;border-radius:3px}
+.no-logo{color:#d1d5db}
+.badge{display:inline-block;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:600}
+.badge-normal{background:#dcfce7;color:#166534}
+.badge-conflict{background:#fee2e2;color:#991b1b}
+.badge-skip{background:#fef9c3;color:#854d0e}
+.badge-overlap{background:#fce7f3;color:#9d174d}
+.time{color:#6b7280;font-size:11px;white-space:nowrap}
+.filter-info{font-size:12px;color:#6b7280;margin-bottom:8px}
+.placeholder,.error{font-size:13px;color:#6b7280;background:#fff;border-radius:10px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,.07)}
+.error{color:#991b1b;background:#fef2f2}
+</style></head>
+<body>
+<h2 id="heading">📺 録画予約一覧</h2>
+<div class="filter-info" id="filterInfo"></div>
+<div id="app"><p class="placeholder">録画予約一覧を要求するとここに表示されます。</p></div>
+<script>
+(function () {
+  const appEl = document.getElementById("app");
+  const headingEl = document.getElementById("heading");
+  const filterInfoEl = document.getElementById("filterInfo");
+  const initId = "init-" + Math.random().toString(36).slice(2);
+
+  function escHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderRows(items) {
+    return items.map(function (item) {
+      const logo = item.logo
+        ? '<img class="logo" src="' + item.logo + '" alt="logo" />'
+        : '<span class="no-logo">—</span>';
+
+      let badgeClass = "badge-normal";
+      if (item.isSkip) badgeClass = "badge-skip";
+      else if (item.isConflict) badgeClass = "badge-conflict";
+      else if (item.isOverlap) badgeClass = "badge-overlap";
+
+      return "<tr>" +
+        "<td>" + logo + "</td>" +
+        "<td>" + escHtml(item.channelName || "") + "</td>" +
+        "<td class='time'>" + escHtml(item.timeText || "") + "</td>" +
+        "<td>" + escHtml(item.name || "") + "</td>" +
+        "<td><span class='badge " + badgeClass + "'>" + escHtml(item.status || "") + "</span></td>" +
+      "</tr>";
+    }).join("");
+  }
+
+  function render(payload) {
+    const items = Array.isArray(payload && payload.items) ? payload.items : [];
+    const title = payload && payload.title ? payload.title : "録画予約一覧";
+    const emptyMessage = payload && payload.emptyMessage ? payload.emptyMessage : "該当する予約はありません。";
+    headingEl.textContent = "📺 " + title + "（" + items.length + " 件）";
+
+    if (payload && (payload.startDate || payload.endDate)) {
+      filterInfoEl.textContent = "期間: " + (payload.startDate || "") + " 〜 " + (payload.endDate || "");
+    } else {
+      filterInfoEl.textContent = "";
+    }
+
+    if (items.length === 0) {
+      appEl.innerHTML = "<p class='placeholder'>" + escHtml(emptyMessage) + "</p>";
+      return;
+    }
+
+    const rows = renderRows(items);
+    appEl.innerHTML =
+      '<table><thead><tr><th>ロゴ</th><th>放送局</th><th>時間</th><th>番組名</th><th>状態</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function showError(message) {
+    appEl.innerHTML = "<p class='error'>" + escHtml(message) + "</p>";
+  }
+
+  function postJsonRpc(message) {
+    window.parent.postMessage(Object.assign({ jsonrpc: "2.0" }, message), "*");
+  }
+
+  window.addEventListener("message", function (event) {
+    let data = event.data;
+    if (typeof data === "string") {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        return;
+      }
+    }
+
+    if (!data || data.jsonrpc !== "2.0") return;
+
+    if (data.id === initId && data.result) {
+      postJsonRpc({ method: "ui/notifications/initialized", params: {} });
+      return;
+    }
+
+    if (data.method === "ui/notifications/tool-result") {
+      const result = data.params || {};
+      if (result.isError) {
+        showError("録画予約一覧の取得に失敗しました。");
+        return;
+      }
+      if (result.structuredContent && Array.isArray(result.structuredContent.items)) {
+        render(result.structuredContent);
+      }
+    }
+  });
+
+  postJsonRpc({
+    id: initId,
+    method: "ui/initialize",
+    params: {
+      appInfo: { name: "epg-reserves-widget", version: "0.1.0" },
+      appCapabilities: {},
+      protocolVersion: "2026-01-26"
+    }
+  });
+})();
+</script>
+</body></html>

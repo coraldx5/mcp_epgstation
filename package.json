@@ -1,0 +1,13 @@
+{
+  "name": "mcp-epgstation",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest",
+    "@modelcontextprotocol/ext-apps": "latest",
+    "zod": "latest"
+  }
+}

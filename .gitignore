@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.log
+err.log
+out.log
+output.txt
+server_output.log
+resources_list.json
+tools_list.json
+tool_call_response.json
